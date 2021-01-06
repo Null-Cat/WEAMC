@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "canvas": "^2.6.1",
+    "cookie": "^0.4.1",
+    "crypto": "^1.0.1",
+    "formidable": "^1.2.2",
+    "merge-images": "^2.0.0",
+    "mime-types": "^2.1.27",
+    "mysql": "^2.18.1",
+    "request": "^2.81.0"
+  },
+  "name": "Webserver"
+}
