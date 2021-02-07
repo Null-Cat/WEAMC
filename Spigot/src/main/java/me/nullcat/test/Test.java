@@ -23,12 +23,28 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public final class Test extends JavaPlugin implements Listener {
     conSql sqlca = new conSql(); //Creates new Connection SQL instance
+
+    Queue<ChunkSnapshot> unprocessedChunks = new LinkedList<>();
+
+    /*public void processChunk() throws SQLException, ClassNotFoundException {
+        while (true){
+            if (unprocessedChunks.size() != 0) {
+                ChunkSnapshot chunk = unprocessedChunks.poll();
+                Bukkit.getScheduler().runTask(this, () -> {
+
+                });
+            }
+        }
+    }*/
+
     @Override
     public void onEnable() {
         // Plugin startup logic
@@ -43,9 +59,10 @@ public final class Test extends JavaPlugin implements Listener {
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
             executorService.scheduleAtFixedRate(() -> {
+                System.out.println("QueueSize: " + unprocessedChunks.size());
                 HashMap values = new HashMap<String, String>() {{
-                    put("memoryused", String.valueOf((Runtime.getRuntime().maxMemory() - Runtime.getRuntime().freeMemory()) / 1048576) + "MB");
-                    put("memorymax", String.valueOf(Runtime.getRuntime().maxMemory() / 1048576) + "MB");
+                    put("memoryused", (Runtime.getRuntime().maxMemory() - Runtime.getRuntime().freeMemory()) / 1048576 + "MB");
+                    put("memorymax", Runtime.getRuntime().maxMemory() / 1048576 + "MB");
                     put("playercount", String.valueOf(Bukkit.getOnlinePlayers().size()));
                 }};
 
@@ -67,16 +84,14 @@ public final class Test extends JavaPlugin implements Listener {
                 try {
                     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
                     System.out.println(response.headers());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
+                } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
                 }
             }, 0, 60, TimeUnit.SECONDS);
         });
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             try {
-                requestHandler httpserver = new requestHandler();
+                requestHandler httpserver = new requestHandler(Bukkit.getServer());
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -106,52 +121,52 @@ public final class Test extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void onChunkLoad(ChunkLoadEvent event) throws SQLException, ClassNotFoundException {
+    public void onChunkLoad(ChunkLoadEvent event) throws ClassNotFoundException {
         ChunkSnapshot chunk = event.getChunk().getChunkSnapshot();
-        getLogger().info(event.getChunk().getX() + " " + event.getChunk().getZ());
-        //conSql sqlca = new conSql(); //Creates new Connection SQL instance
-        for (int i = 0; i < 16; i++) {
-            for (int ii = 0; ii < 16; ii++) {
-                //getLogger().info("x: " + i + " z: " + ii + " Block: " + chunk.getBlockType(i, chunk.getHighestBlockYAt(i, ii) - 1, ii));
-                if (sqlca.exists("SELECT wcoords, intercoords FROM chunks WHERE wcoords = '" + event.getChunk().getX() + "," + event.getChunk().getZ() + "'" +
-                        "AND intercoords = '" + String.valueOf(i) + "," + String.valueOf(ii) + "'")) {
-                    sqlca.execute("UPDATE chunks SET blockid = '" + chunk.getBlockType(i, chunk.getHighestBlockYAt(i, ii) - 1, ii) + "' WHERE wcoords = '" + event.getChunk().getX() + "," + event.getChunk().getZ() + "'" +
-                            "AND intercoords = '" + String.valueOf(i) + "," + String.valueOf(ii) + "'");
-                } else {
-                    sqlca.execute("INSERT INTO chunks(wcoords, intercoords, blockid) " +
-                            "VALUES ('" + event.getChunk().getX() + "," + event.getChunk().getZ() + "', '" +
-                            String.valueOf(i) + "," + String.valueOf(ii) + "', '" + chunk.getBlockType(i, chunk.getHighestBlockYAt(i, ii) - 1, ii) + "')");
+            //getLogger().info(event.getChunk().getX() + " " + event.getChunk().getZ());
+            for (int i = 0; i < 16; i++) {
+                for (int ii = 0; ii < 16; ii++) {
+                    //getLogger().info("x: " + i + " z: " + ii + " Block: " + chunk.getBlockType(i, chunk.getHighestBlockYAt(i, ii) - 1, ii));
+                    try {
+                        if (sqlca.exists("SELECT wcoords, intercoords FROM chunks WHERE wcoords = '" + chunk.getX() + "," + chunk.getZ() + "'" +
+                                "AND intercoords = '" + i + "," + ii + "'")) {
+                            sqlca.execute("UPDATE chunks SET blockid = '" + chunk.getBlockType(i, chunk.getHighestBlockYAt(i, ii) - 1, ii) + "' WHERE wcoords = '" + chunk.getX() + "," + chunk.getZ() + "'" +
+                                    "AND intercoords = '" + i + "," + ii + "'");
+                        } else {
+                            sqlca.execute("INSERT INTO chunks(wcoords, intercoords, blockid) " +
+                                    "VALUES ('" + chunk.getX() + "," + chunk.getZ() + "', '" +
+                                    i + "," + ii + "', '" + chunk.getBlockType(i, chunk.getHighestBlockYAt(i, ii) - 1, ii) + "')");
+                        }
+                    } catch (SQLException | ClassNotFoundException throwables) {
+                        throwables.printStackTrace();
+                    }
                 }
             }
-        }
-        HashMap values = new HashMap<String, String>() {{
-            put("x", String.valueOf(event.getChunk().getX()));
-            put("y", String.valueOf(event.getChunk().getZ()));
-        }};
+            HashMap values = new HashMap<String, String>() {{
+                put("x", String.valueOf(chunk.getX()));
+                put("y", String.valueOf(chunk.getZ()));
+            }};
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        String requestBody = null;
-        try {
-            requestBody = objectMapper.writeValueAsString(values);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
+            ObjectMapper objectMapper = new ObjectMapper();
+            String requestBody = null;
+            try {
+                requestBody = objectMapper.writeValueAsString(values);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://127.0.0.1/processchunk"))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .setHeader("Content-type", "application/json")
+                    .build();
 
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1/processchunk"))
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .setHeader("Content-type", "application/json")
-                .build();
-
-        try {
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            System.out.println(response.headers());
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+            try {
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                System.out.println(response.headers());
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
 
     }
 
