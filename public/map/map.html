@@ -7,8 +7,8 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge" />
   <title>Map</title>
   <link rel="stylesheet" href="./main.css" />
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAAG5SzzFwRV_TTwt6ppsfCJ2jppA3w1MA&callback=initMap&libraries=&v=weekly"defer></script>
-  <script src="./main.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/build/ol.js"></script>
+  <script src="https://unpkg.com/elm-pep"></script>
 </head>
 
 <body>
@@ -20,10 +20,8 @@
     <!--<a href="../console/console.html">Console</a>-->
     <!--<a href="../status/status.html">Status</a>-->
   </div>
-  <div class="content">
-    <div id="map"></div>
-
-  </div>
+    <div id="map" class="map"></div>
+    <script src="./main.js"></script>
   <!--<script src="./main.js"></script>-->
 </body>
 

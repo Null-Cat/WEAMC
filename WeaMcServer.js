@@ -13,13 +13,25 @@ const request = require("request")
 
 var serverInfo = { playercount: '0', memorymax: '1024MB', memoryused: '0MB' }; //Init server info
 
+var sqlconfig = { //SQL Config
+  user: 'root',
+  password: 'root',
+  server: 'localhost',
+  port: 3306,
+  database: 'weamc'
+};
+let con = mysql.createConnection(sqlconfig);
+con.connect( function(err) {
+  if (err) {
+    console.log("Error Connecting to Database: " + err.message);
+    return;
+  };
+  console.log("Connected to SQL DB!");
+});
+
 const server = http.createServer((req, res) => {
   function isEmptyObject(obj) {
     return !Object.keys(obj).length;
-  }
-
-  function usingAuthenticatedCookie(cookie) {
-    //TODO
   }
 
   function blockpath(block) {
@@ -49,6 +61,7 @@ const server = http.createServer((req, res) => {
     return __dirname + "/block/red_shulker_box.png";
   }
 
+  // Merge Sort
   function merge(left, right) {
     let resultArray = [], leftIndex = 0, rightIndex = 0;
 
@@ -64,7 +77,6 @@ const server = http.createServer((req, res) => {
     return resultArray.concat(left.slice(leftIndex)).concat(right.slice(rightIndex));
   }
 
-  // Merge Sort
   function mergeSort(unsortedArray) {
     if (unsortedArray.length <= 1) {//don't sort if too small or empty
       return unsortedArray;
@@ -77,14 +89,18 @@ const server = http.createServer((req, res) => {
     return merge(mergeSort(left), mergeSort(right));
   }
 
-  var sqlconfig = { //SQL Config
-    user: 'root',
-    password: 'root',
-    server: 'localhost',
-    port: 3306,
-    database: 'weamc'
-  };
-  let con = mysql.createConnection(sqlconfig);
+  function usingAuthenticatedCookie(cookie) {
+    con.connect( function(err) {
+      if (err) {
+        console.log("Error Connecting to Database: " + err.message);
+        res.statusCode = 500;
+        res.end();
+        return;
+      };
+      console.log("Connected to SQL DB!");
+      //con.query
+    });
+  }
 
   let parsedURL = url.parse(req.url, true);
   let path = parsedURL.path.replace(/^\/+|\/+$/g, ""); //remove the leading and trailing slashes
@@ -102,14 +118,6 @@ const server = http.createServer((req, res) => {
       }
       let jsonfields = fields
       console.log(jsonfields.user);
-      con.connect(function (err) {
-        if (err) {
-          console.log("Error Connecting to Database: " + err.message);
-          res.statusCode = 500;
-          res.end();
-          return;
-        };
-        console.log("Connected to SQL DB!");
         con.query(`SELECT username, hash FROM webcreds WHERE username = '${jsonfields.user}'`, function (err, recordset) { //Pulling hash from SQL DB
           if (err) { console.log(`SQL error: ${err.message}`) }
           console.log(recordset)
@@ -134,7 +142,6 @@ const server = http.createServer((req, res) => {
             }
           }
         });
-      });
     });
   }
 
@@ -159,14 +166,6 @@ const server = http.createServer((req, res) => {
         console.log(`Form error: ${err.message}`);
         return;
       }
-      con.connect(function (err) {
-        if (err) {
-          console.log("Error Connecting to Database: " + err.message);
-          res.statusCode = 500;
-          res.end();
-          return;
-        };
-        console.log("Connected to SQL DB!");
         console.log(`${fields.x},${fields.y}`)
         con.query(`SELECT intercoords, blockid FROM chunks WHERE wcoords = '${fields.x},${fields.y}'`, function (err, recordset) { 
           if (err) { console.log(`SQL error: ${err.message}`) }
@@ -256,14 +255,13 @@ const server = http.createServer((req, res) => {
             let filteredChunks = chunks.filter(function (el){return el != null});
             mergeImages(filteredChunks, { Canvas: Canvas, Image: Image, width: 256, height: 256 }).then((img) => {
               //console.log(img);
-              fs.promises.mkdir(__dirname + `/renderedchunks/5/${fields.x}/`, { recursive: true }).catch(console.error);
+              fs.promises.mkdir(__dirname + `/public/renderedchunks/5/${fields.x}/`, { recursive: true }).catch(console.error);
               var base64Data = img.replace(/^data:image\/png;base64,/, "");
-              fs.writeFile(__dirname + `/renderedchunks/5/${fields.x}/${fields.y}.png`, base64Data, 'base64', function (err) { console.log(err); });
+              fs.writeFile(__dirname + `/public/renderedchunks/5/${fields.x}/${fields.y}.png`, base64Data, 'base64', function (err) { console.log(err); });
               console.log(`Rendered Chunk: ${fields.x}, ${fields.y}`)
             });
           }
         });
-      });
       console.log(fields);
       res.statusCode = 200;
       res.end();
@@ -285,9 +283,6 @@ const server = http.createServer((req, res) => {
     let playerlist = '';
     fs.readFile(__dirname + "/public/players/players.html", function (err, content) {
       console.log(`Returning ${path}`);
-      con.connect(function (err) {
-        if (err) { throw err };
-        console.log("Connected to SQL DB!");
         con.query("SELECT * FROM players", function (err, recordset) {
           if (err) { console.log(`SQL error: ${err.message}`) }
           console.log(recordset)
@@ -309,7 +304,6 @@ const server = http.createServer((req, res) => {
             res.end(editedcontent);
           }
         })
-      });
     });
   }
 
@@ -336,50 +330,36 @@ const server = http.createServer((req, res) => {
     res.end();
   }
 
-  // else if (path === 'fwefewfwef') { //handle  to dashboard and read id for login
-  //   let clientsessionid = cookie.parse(req.headers.cookie || '').SessionId
-  //   console.log(cookie.parse(req.headers.cookie || ''));
-  //   console.log(clientsessionid);
-  //   con.connect(function (err) {
-  //     if (err) { throw err };
-  //     console.log("Connected to SQL DB!")
-  //     con.query(`SELECT sessionid from sessions where sessionid = '${clientsessionid}'`, function (err, recordset) {
-  //       if (err) { console.log(`SQL error: ${err.message}`) }
-  //       console.log(recordset);
-  //       if (isEmptyObject(recordset) || recordset === undefined) {
-  //         console.log("Not in DB ##");
-  //         res.writeHead(302, { 'Location': "index.html" });
-  //         res.end();
-  //         return;
-  //       } else {
-  //         res.writeHead(302, { 'Location': "dashboard/dashboard.html" });
-  //         res.end();
-  //       }
-  //     });
-  //   });
-  // } 
   else {
 
     let file = __dirname + "/public/" + path//.substring(0, function () { if (path.indexOf("?") === -1) { return path.length - 1 } else { return path.indexOf("?") - 1 } });
     fs.readFile(file, function (err, content) { //normal page rendering/handling this also includes any file hosted on server such as css and js
+      let mime = lookup(file);
+      console.log(mime)
       if (err) {
         console.log(`File Not Found ${file}`);
         res.writeHead(404);
         res.end();
+      } else if (mime === "image/png"){
+        console.log(`Returning ${path}`);
+        res.setHeader("X-Content-Type-Options", "nosniff"); //nosniff so the browser doesn't guess mime type
+        res.writeHead(200, { "Content-type": mime }); //specify the content type in the response for proper browser interpretation
+        res.end(content);
+        return;
       } else {
         let cookies = req.headers.cookie
         console.log(cookie.parse(req.headers.cookie || ''));
         if (cookies === undefined) {
           let id = crypto.randomBytes(20).toString('hex')
           res.setHeader('Set-Cookie', cookie.serialize('SessionId', id, { maxAge: 3600, path: '/' }));
-          res.setHeader('Location', req.headers.referer || '/')
+          console.log(path)
+          res.setHeader('Location', '/')
           res.statusCode = 302;
           res.end();
           return;
         }
         console.log(`Returning ${path}`);
         res.setHeader("X-Content-Type-Options", "nosniff"); //nosniff so the browser doesn't guess mime type
-        let mime = lookup(path);
         res.writeHead(200, { "Content-type": mime }); //specify the content type in the response for proper browser interpretation
         res.end(content);
       }
