@@ -11,3 +11,5 @@ WEAMC is a webserver that allows for remote administration of a Minecraft server
 * Full set of administrative tools
 * User registration
 * HTTPS
+
+[Trello](https://trello.com/b/jz6WRGC2/wea-mc)
