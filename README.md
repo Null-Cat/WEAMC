@@ -7,7 +7,7 @@ WEAMC is a webserver that allows for remote administration of a Minecraft server
 * Spigot Server (Minecraft 1.15.2)
 
 ## WIP
-* Interactive World Map
+* ~~Interactive World Map~~
 * Full set of administrative tools
 * User registration
 * HTTPS
