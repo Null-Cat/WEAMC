@@ -34,28 +34,17 @@ public final class Test extends JavaPlugin implements Listener {
 
     Queue<ChunkSnapshot> unprocessedChunks = new LinkedList<>();
 
-    /*public void processChunk() throws SQLException, ClassNotFoundException {
-        while (true){
-            if (unprocessedChunks.size() != 0) {
-                ChunkSnapshot chunk = unprocessedChunks.poll();
-                Bukkit.getScheduler().runTask(this, () -> {
-
-                });
-            }
-        }
-    }*/
-
     @Override
     public void onEnable() {
         // Plugin startup logic
         System.out.println("Running Test Plugin");
         System.out.println("Memory Usage is: " + (Runtime.getRuntime().maxMemory() - Runtime.getRuntime().freeMemory()) / 1048576 + "MB/" + Runtime.getRuntime().maxMemory() / 1048576 + "MB");
 
-        try {
-            sqlca.testt();
+        /*try {
+            //sqlca.testt();
         } catch (SQLException | ClassNotFoundException throwables) {
             throwables.printStackTrace();
-        }
+        }*/
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
             executorService.scheduleAtFixedRate(() -> {
@@ -91,7 +80,7 @@ public final class Test extends JavaPlugin implements Listener {
         });
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             try {
-                requestHandler httpserver = new requestHandler(Bukkit.getServer());
+                requestHandler httpserver = new requestHandler(Bukkit.getServer(), this);
             } catch (IOException e) {
                 e.printStackTrace();
             }

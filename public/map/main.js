@@ -7,10 +7,11 @@ var map = new ol.Map({
         wrapX: false,
         maxZoom: 5,
         minZoom: 5,
+        transition: 0,
       }),
     }) ],
   view: new ol.View({
-    center: [0, -33],
+    center: [0, 0],
     zoom: 5,
   }),
 });

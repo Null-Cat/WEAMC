@@ -38,18 +38,6 @@ public class conSql {
         }
     }
 
-    public void testt() throws SQLException, ClassNotFoundException {
-        openConnection();
-        Statement statement = connection.createStatement();
-        ResultSet results = statement.executeQuery("SELECT * FROM webcreds WHERE username = 'bob'"); //SQL execute
-        results.last();
-        System.out.println(results.getRow());
-        while (results.next()) {
-            System.out.println(results.getString("username"));
-
-        }
-    }
-
     public void execute(String query) throws SQLException, ClassNotFoundException {
         openConnection();
         Statement statement = connection.createStatement();
