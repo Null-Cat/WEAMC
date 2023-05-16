@@ -1,5 +1,6 @@
 # WEAMC
 WEAMC is a webserver that allows for remote administration of a Minecraft server through Spigot Plugins
+
 College Project
 
 ## Requirements
